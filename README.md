@@ -18,7 +18,6 @@ The website will be available at http://locahost:8080
 
 https://github.com/user-attachments/assets/4643b949-22c7-4765-84ba-3dbe175b94ec
 
-
 # Dynamic profiler
 
 Problem statement for the following writeup is as follows:
@@ -30,7 +29,7 @@ This can happen 2 ways:
 - inside the custom react implementation, we track certain events and timings to derive useful insights
 - we transform user code to use our program trackers, where our trackers will accumulate data that we can use to service useful insights, de-coupling us from the framework
 
-The goal for this take home is the former, while using babel.
+The goal for this take home is the latter, while using babel.
 
 I’ve never specifically used babel, but do have experience with programming language theory (AST’s, parsers, PL semantics). So the first goal was to translate my theoretical knowledge into functional by getting a quick example of the library up and running.
 
