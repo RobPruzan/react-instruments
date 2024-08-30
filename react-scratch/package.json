@@ -1,0 +1,16 @@
+{
+  "name": "react-scratch",
+  "module": "index.ts",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot server.ts",
+    "react-watch": "tsc src/script.ts --module ESNext --target ESNext --moduleResolution node --watch --skipLibCheck --outDir dist",
+    "react": "tsc script.ts --module ESNext --target ESNext --moduleResolution node --watch --skipLibCheck --outDir dist"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.6.0-beta"
+  }
+}
