@@ -14,12 +14,37 @@ export type Event =
       astMetadata: any;
       reactMetadata: any;
       time: number;
+    }
+  | {
+      kind: "hook-start";
+      hookName: string;
+      args: Array<any>;
+      astMetadata: string;
+      time: number;
+      hookCallId: string;
+    }
+  | {
+      kind: "hook-end";
+      time: number;
+      hookCallId: string;
+    }
+  | {
+      kind: "hook-cb-start";
+      args: Array<any>;
+      hookCallId: string;
+      time: number;
+      cbId: string;
+    }
+  | {
+      kind: "hook-cb-end";
+      cbId: string;
+      time: number;
     };
+
 export const eventQueue: { current: Array<Event> } = { current: [] };
 
 setInterval(() => {
   if (eventQueue.current.length > 0) {
-    console.log("track", eventQueue);
     fetch("http://localhost:8080/dispatch", {
       body: JSON.stringify(eventQueue.current),
       method: "POST",
@@ -44,7 +69,6 @@ export const end = <T>(
 };
 
 export const _onStart = (metadata: any) => {
-  console.log("my meta", metadata);
   const startId = crypto.randomUUID();
   eventQueue.current.push({
     kind: "render-start",
@@ -72,7 +96,6 @@ export const trackCreateElement = (
   props: Record<string, unknown> | null,
   ...children: Array<any>
 ) => {
-  console.log("tracking", metadata);
   const reactMeta = {
     componentName: component.name,
     props: props,
@@ -91,6 +114,52 @@ export const trackCreateElement = (
   return React.createElement(
     component,
     props === null ? extraProps : { ...props, ...extraProps }
-    // []
   );
+};
+
+export const trackHook = <T>(
+  hookName: string,
+  locJson: string,
+  fn: (...args: Array<any>) => T,
+  args: Array<any>
+) => {
+  const hookCallId = crypto.randomUUID();
+
+  if (["useCallback", "useMemo", "useEffect"].includes(hookName)) {
+    const fn = args[0];
+    args[0] = (...args: Array<any>) => {
+      const cbId = crypto.randomUUID();
+      eventQueue.current.push({
+        kind: "hook-cb-start",
+        args,
+        hookCallId,
+        time: performance.now(),
+        cbId,
+      });
+      const result = fn(...args);
+      eventQueue.current.push({
+        kind: "hook-cb-end",
+        time: performance.now(),
+        cbId,
+      });
+
+      return result;
+    };
+  }
+  eventQueue.current.push({
+    kind: "hook-start",
+    args,
+    hookName,
+    astMetadata: locJson,
+    time: performance.now(),
+    hookCallId,
+  });
+  const result = fn(...args);
+  eventQueue.current.push({
+    kind: "hook-end",
+    time: performance.now(),
+    hookCallId,
+  });
+
+  return result;
 };

@@ -16,7 +16,7 @@ export type UseStateMetadata = {
 };
 export type UseEffectMetadata = {
   kind: "effect";
-  deps: Array<unknown> | undefined;
+  deps: Array<unknown>;
   cb: () => unknown;
   cleanup: (() => void) | null;
 };

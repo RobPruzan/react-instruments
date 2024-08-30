@@ -800,7 +800,6 @@ const generateRenderNodeChildNodes = ({
     if (internalMetadata.kind === "empty-slot") {
       return newNode;
     }
-    console.log("nani", internalMetadata);
     internalMetadata.children.map((child, index) => {
       aux({
         internalMetadata: child,
@@ -929,7 +928,7 @@ export const createContext = <T>(initialValue: T) => {
  * Outputs a new view tree based on the provided render node
  *
  */
-export const generateViewTree = ({
+const generateViewTree = ({
   renderNode,
   parentViewNode,
 }: {
@@ -1181,10 +1180,6 @@ const generateViewTreeHelper = ({
           const currentDeps = effect.deps;
           const previousDeps = previousRenderEffects[index];
 
-          if (!currentDeps || !previousDeps) {
-            return true;
-          }
-
           if (currentDeps.length !== previousDeps.length) {
             return true;
           }
@@ -1422,7 +1417,7 @@ export const useRef = <T>(initialValue: T) => {
 };
 
 // this is wrong, need to potentially update deps and cb
-export const useEffect = (cb: () => void, deps?: Array<unknown>) => {
+export const useEffect = (cb: () => void, deps: Array<unknown>) => {
   if (!currentTreeRef.renderTree) {
     throw new Error("Cannot call use effect outside of a react component");
   }
@@ -1460,8 +1455,6 @@ export const useEffect = (cb: () => void, deps?: Array<unknown>) => {
   }
 
   if (
-    !effect.deps ||
-    !deps ||
     effect.deps.length !== deps.length ||
     !effect.deps.every((dep, index) => {
       const newDep = deps[index];

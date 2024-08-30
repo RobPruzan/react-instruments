@@ -2,6 +2,10 @@
   "name": "react-instruments",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "build": "bun run core/transformer.ts && bun build demo-script-transformed.ts --outdir dist",
+    "dev": "bun run --hot server.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
