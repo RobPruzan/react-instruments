@@ -14,6 +14,11 @@ The website will be available at http://locahost:8080
 
 > This server is responsible for serving the demo website, and receiving + aggregating program events. The server will be logging website stats to stdout when available
 
+## Demo
+
+https://github.com/user-attachments/assets/4643b949-22c7-4765-84ba-3dbe175b94ec
+
+
 # Dynamic profiler
 
 Problem statement for the following writeup is as follows:
