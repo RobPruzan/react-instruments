@@ -4,6 +4,7 @@ import generate from "@babel/generator";
 import * as t from "@babel/types";
 import { readFileSync, writeFileSync } from "fs";
 
+const visitedSymbol = Symbol("visited");
 const inputFilePath = "inputs/test.ts";
 const code = readFileSync(inputFilePath, "utf-8");
 
@@ -58,50 +59,12 @@ traverse(ast, {
   },
 });
 
-function isAlreadyEnhanced(
-  funcPath: NodePath<
-    t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression
-  >
-): boolean {
-  const params = funcPath.node.params[0];
-
-  const hasOnStart =
-    t.isObjectPattern(params) &&
-    params.properties.some((prop) =>
-      t.isIdentifier((prop as t.ObjectProperty).key, { name: "onStart" })
-    );
-  const hasOnEnd =
-    t.isObjectPattern(params) &&
-    params.properties.some((prop) =>
-      t.isIdentifier((prop as t.ObjectProperty).key, { name: "onEnd" })
-    );
-
-  if (!hasOnStart || !hasOnEnd) return false;
-
-  let hasStartCall = false;
-  let hasUseEffect = false;
-  funcPath.traverse({
-    VariableDeclarator(path) {
-      if (t.isIdentifier(path.node.id, { name: "_startId" })) {
-        hasStartCall = true;
-      }
-    },
-    CallExpression(path) {
-      if (t.isIdentifier(path.node.callee, { name: "useEffect" })) {
-        hasUseEffect = true;
-      }
-    },
-  });
-
-  return hasOnStart && hasOnEnd && hasStartCall && hasUseEffect;
-}
-
 function modifyFunctionDeclaration(
   funcPath: NodePath<
     t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression
   >
 ): void {
-  if (isAlreadyEnhanced(funcPath)) {
+  if ((funcPath.node as any)[visitedSymbol]) {
     console.log(
       `Skipping already enhanced function: ${
         funcPath.node.id ? funcPath.node.id.name : "anonymous"
@@ -115,6 +78,8 @@ function modifyFunctionDeclaration(
       funcPath.node.id ? funcPath.node.id.name : "anonymous"
     }`
   );
+
+  (funcPath.node as any)[visitedSymbol] = true;
 
   if (funcPath.node.params.length === 0) {
     funcPath.node.params = [
@@ -157,18 +122,21 @@ function modifyFunctionDeclaration(
     ])
   );
 
-  funcPath.node.body.body.splice(
-    1,
-    0,
-    t.expressionStatement(
-      t.callExpression(t.identifier("useEffect"), [
-        t.arrowFunctionExpression(
-          [],
-          t.callExpression(t.identifier("onEnd"), [startId])
-        ),
-      ])
-    )
-  );
+  funcPath.traverse({
+    ReturnStatement(returnPath: NodePath<t.ReturnStatement>) {
+      if (!(returnPath.node as any)[visitedSymbol]) {
+        returnPath.replaceWith(
+          t.returnStatement(
+            t.callExpression(t.identifier("onEnd"), [
+              returnPath.node.argument || t.identifier("undefined"),
+              startId,
+            ])
+          )
+        );
+        (returnPath.node as any)[visitedSymbol] = true;
+      }
+    },
+  });
 
   funcPath.stop();
 }

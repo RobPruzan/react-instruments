@@ -9,6 +9,7 @@ const Component = ({ x }: { x: number }) => {
     null,
     ...[
       createElement(TitleComponent, null),
+      createElement(TitleComponent, null),
       createElement(ButtonComponent, null),
     ]
   );

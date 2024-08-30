@@ -79,11 +79,13 @@ export const trackCreateElement = (
     numChildren: children.length,
   };
   const curriedOnStart = () => _onStart({ ast: metadata, react: reactMeta });
-  const curriedOnEnd = (startId: string) =>
+  const curriedOnEnd = (expression: any, startId: string) => {
     _onEnd(startId, {
       ast: metadata,
       react: reactMeta,
     });
+    return expression;
+  };
   const extraProps = { onStart: curriedOnStart, onEnd: curriedOnEnd };
   console.log(children);
   return React.createElement(
