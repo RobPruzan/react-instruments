@@ -1,3 +1,19 @@
+# Running the project
+
+install bun if not already installed https://bun.sh/docs/installation
+
+Build the demo website
+`bun run build`
+
+> This transforms the react code to an intermediate representation that allows us to track program information. Then this transformed code is transpiled to JS which will be directly requested in the demo website
+
+Run the demo server
+`bun run dev`
+
+The website will be available at http://locahost:8080
+
+> This server is responsible for serving the demo website, and receiving + aggregating program events. The server will be logging website stats to stdout when available
+
 # Dynamic profiler
 
 Problem statement for the following writeup is as follows:
@@ -163,6 +179,150 @@ And this is pretty simple with a babel transform. We just need to look for some 
 Inside `track` we can do the basics like track how long the hook itself took to run. More advanced things can be done since we have omniscient knowledge of the type of arguments being passed to these hooks. `useEffect` , `useMemo` , and `useCallback` all take a callback as their first argument and will be run conditionally between renders. We can mutate this argument so when it is called, an event is sent to our remote server.
 
 All that’s left is to actually process the events. This is not super worth writing about- just some loops to aggregate the collected events into something useful.
+
+## Example transformation:
+
+### Input
+
+```typescript
+import {
+  buildReactTrees,
+  createElement,
+  useEffect,
+  useState,
+  render,
+} from "../react-scratch/src/react/core";
+
+const Component = () => {
+  const [x, setX] = useState(0);
+
+  useEffect(() => {
+    for (let i = 0; i < 100000000; i++) {
+      Math.cos(100);
+    }
+  }, [x]);
+  return createElement(
+    "div",
+    null,
+    ...[
+      createElement(TitleComponent, null),
+      createElement(TitleComponent, null),
+      createElement(ButtonComponent, null),
+      createElement("button", {
+        onclick: () => {
+          setX(x + 1);
+        },
+        innerText: "Counter (that triggers an expensive effect): " + x,
+      }),
+    ]
+  );
+};
+
+const TitleComponent = () => {
+  return createElement("h1", { innerText: "Some random text" });
+};
+
+const ButtonComponent = () => {
+  return createElement("button", { innerText: "A random button" });
+};
+
+window.onload = () => {
+  render(createElement(Component, null), document.getElementById("root")!);
+};
+```
+
+### Output
+
+```typescript
+import { trackHook, trackCreateElement } from "@/track";
+import {
+  buildReactTrees,
+  createElement,
+  useEffect,
+  useState,
+  render,
+} from "../react-scratch/src/react/core";
+const Component = ({ onStart: onStart, onEnd: onEnd }) => {
+  const _startId = onStart();
+  const [x, setX] = trackHook(
+    "useState",
+    '{"loc":{"start":{"line":10,"column":20},"end":{"line":10,"column":31}}}',
+    useState,
+    [0]
+  );
+  trackHook(
+    "useEffect",
+    '{"loc":{"start":{"line":12,"column":2},"end":{"line":16,"column":9}}}',
+    useEffect,
+    [
+      () => {
+        for (let i = 0; i < 100000000; i++) {
+          Math.cos(100);
+        }
+      },
+      [x],
+    ]
+  );
+  return onEnd(
+    createElement(
+      "div",
+      null,
+      ...[
+        trackCreateElement(
+          '{"loc":{"start":{"line":21,"column":6},"end":{"line":21,"column":41}}}',
+          TitleComponent,
+          {}
+        ),
+        trackCreateElement(
+          '{"loc":{"start":{"line":22,"column":6},"end":{"line":22,"column":41}}}',
+          TitleComponent,
+          {}
+        ),
+        trackCreateElement(
+          '{"loc":{"start":{"line":23,"column":6},"end":{"line":23,"column":42}}}',
+          ButtonComponent,
+          {}
+        ),
+        createElement("button", {
+          onclick: () => {
+            setX(x + 1);
+          },
+          innerText: "Counter (that triggers an expensive effect): " + x,
+        }),
+      ]
+    ),
+    _startId
+  );
+};
+const TitleComponent = ({ onStart: onStart, onEnd: onEnd }) => {
+  const _startId = onStart();
+  return onEnd(
+    createElement("h1", {
+      innerText: "Some random text",
+    }),
+    _startId
+  );
+};
+const ButtonComponent = ({ onStart: onStart, onEnd: onEnd }) => {
+  const _startId = onStart();
+  return onEnd(
+    createElement("button", {
+      innerText: "A random button",
+    }),
+    _startId
+  );
+};
+window.onload = () => {
+  render(
+    trackCreateElement(
+      '{"loc":{"start":{"line":43,"column":9},"end":{"line":43,"column":39}}}',
+      Component,
+      {}
+    ),
+    document.getElementById("root")!
+  );
+};
+```
 
 ### Known limitations
 
